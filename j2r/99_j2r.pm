@@ -21,7 +21,7 @@
 #
 ################################################################
 
-# $Id: 99_j2r.pm 1 1970-01-101 00:00:00Z dev0 $
+# $Id: 99_j2r.pm 101 1970-01-101 00:00:00Z dev0 $
 
 package main;
 
@@ -29,12 +29,12 @@ use strict;
 use warnings;
 use POSIX;
 
-sub
-j2r_Initialize($$) {
-  my ($hash) = @_;
-	Log3($hash, 3, "99_j2r.pm v1.0 (re)loaded");
-}
+sub j2r_update($$;$$);
 
+sub j2r_Initialize($$) {
+  my ($hash) = @_;
+  Log3($hash, 3, "99_j2r.pm v1.0 (re)loaded");
+}
 
 sub j2r($$) {
   my ($name,$event) = @_;
@@ -43,7 +43,7 @@ sub j2r($$) {
   my $j = (split(": ",$event,2))[1];
   my $h;
 
-	if ( not eval "use JSON; 1;" ) {
+  if ( not eval "use JSON; 1;" ) {
     Log3 $name, 1, "$type $name: WARNING: Perl modul JSON is not installed.";
     return "Perl module JSON is missing";
   }
@@ -70,26 +70,22 @@ sub j2r_update($$;$$) {
   $suffix = "" if( !$suffix );
   $suffix = "_$suffix" if( $suffix );
 
-  if(  ref($ref) eq "ARRAY" ) {
-    while( my ($key,$value) = each $ref) {
+  if( ref( $ref ) eq "ARRAY" ) {
+    while( my ($key,$value) = each @{ $ref } ) {
       j2r_update($hash,$value,$prefix.sprintf("%02i",$key+1)."_");
     }
   }
-  elsif( ref($ref) eq "HASH" ) {
-    while( my ($key,$value) = each $ref) {
-      if( ref($value) ) {
+  elsif( ref( $ref ) eq "HASH" ) {
+    while( my ($key,$value) = each %{ $ref } ) {
+      if( ref( $value ) ) {
         j2r_update($hash,$value,$prefix.$key.$suffix."_");
       }
       else {
-       readingsBulkUpdate($hash, j2r_clean($prefix).j2r_clean($key).j2r_clean($suffix), $value);
+        (my $reading = $prefix.$key.$suffix) =~ s/[^A-Za-z\d_\.\-\/]/_/g;
+        readingsBulkUpdate($hash, $reading, $value);
       }
     }
   }
-}
-
-sub j2r_clean($) {
-  (my $r = @_[0]) =~ s/[^A-Za-z\d_\.\-\/]/_/g;
-  return $r;
 }
 
 1;
