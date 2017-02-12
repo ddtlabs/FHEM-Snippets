@@ -1,4 +1,4 @@
-################################################################
+################################################################################
 #
 #  Copyright (c) 2017 dev0
 #
@@ -19,9 +19,14 @@
 #
 #  This copyright notice MUST APPEAR in all copies of the script!
 #
-################################################################
+################################################################################
 
-# $Id: 99_j2r.pm 101 1970-01-101 00:00:00Z dev0 $
+# $Id: 99_j2r.pm 104 1970-01-101 00:00:00Z dev0 $
+
+# release change log:
+# ------------------------------------------------------------------------------
+# 1.0  initial release
+# 1.04 use InternalTimer to break out of FHEM's event loop detection
 
 package main;
 
@@ -33,26 +38,44 @@ sub j2r_update($$;$$);
 
 sub j2r_Initialize($$) {
   my ($hash) = @_;
-  Log3($hash, 3, "99_j2r.pm v1.0 (re)loaded");
+  Log3($hash, 3, "99_j2r.pm v1.04 (re)loaded");
 }
 
 sub j2r($$) {
   my ($name,$event) = @_;
+  if ( !defined $name || !defined $event ) {
+    Log3 undef, 1, "j2r: Missing argument(s), usage: j2r(device, event)";
+  }
+  else {
+    InternalTimer(gettimeofday()+0.01, "j2r_do", "$name,$event");
+  }
+  return undef;
+}
+
+sub j2r_do($) {
+  my ($p) = @_;
+  my ($name,$event) = split(",", $p, 2);
+
+  if ( ref( $defs{$name} ) ne "HASH" ) {
+    Log3 $name, 1, "j2r: WARNING: invalid device name";
+    return undef;
+  }
+
   my $hash = $defs{$name};
   my $type = $hash->{TYPE};
-  my $j = (split(": ",$event,2))[1];
+  my $j = ( split(": ", $event, 2) )[1];
   my $h;
 
   if ( not eval "use JSON; 1;" ) {
     Log3 $name, 1, "$type $name: WARNING: Perl modul JSON is not installed.";
-    return "Perl module JSON is missing";
+    return undef;
   }
 
   eval { $h = decode_json($j); 1; };
   if ( $@ ) {
     Log3 $name, 2, "$type $name: WARNING: deformed JSON data, check your config.";
     Log3 $name, 2, "$type $name: $@";
-    return "deformed or no JSON";
+    return undef;
   }
 
   readingsBeginUpdate($hash);
