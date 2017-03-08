@@ -1,1 +1,1 @@
-Bbsolet: Please see: https://github.com/ddtlabs/expandJSON
+Obsolet: Please use: https://github.com/ddtlabs/expandJSON
